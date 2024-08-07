@@ -1,58 +1,64 @@
-# Hand-Gesture-using-CNN
-# Work in Progress 🚧...................
+# Hand Gesture Image Capture using CNN
+# 🚧🚧 IN PROGRESS 🚧🚧
 
-## Hand Gesture Image Capture and Processing
+This Python script uses OpenCV to capture images of hand gestures from a webcam. It saves images of different gestures in designated directories, with each gesture being associated with a specific key press.
 
-## Overview
+## Prerequisites
 
-This project involves capturing hand gesture images using a webcam, processing these images to create black and white versions, and organizing them into separate folders. The real colored images are saved in the `images/` folder, while the processed black and white images are saved in the `dataset/` folder.
+Before running the script, make sure you have the following Python packages installed:
+- `cv2` (OpenCV)
+- `numpy`
 
-## Setup
+You can install these packages using pip:
+```bash
+pip install opencv-python numpy
+```
 
-1. **Install Dependencies**
+## Script Overview
 
-   Ensure you have Python and the required libraries installed. Use the following commands to install the necessary packages:
+1. **Setup**: Creates a directory structure to save images of different hand gestures. The directories are:
+    - `HandGesture360x360/`
+        - `Index/`
+        - `Middle/`
+        - `Ring/`
+        - `Pinky/`
+        - `Thumb/`
+        - `Palm/`
 
-   ```sh
-   pip install opencv-python numpy
-   ```
+2. **Video Capture**: Captures video from the default webcam and displays two windows:
+    - **Main Capture Window**: Shows the entire frame with a rectangular region of interest (ROI) highlighted.
+    - **Right Capture Window**: Displays the ROI in grayscale and resized to 360x360 pixels.
 
-2. **Folder Structure**
+3. **ROI Extraction**: A rectangular region of interest (ROI) is extracted from the right side of the frame. This ROI is processed (converted to grayscale and resized) and displayed in the second window.
 
-   Ensure the following folder structure is in place:
+4. **Image Saving**: Depending on the key pressed ('1' to '6'), the ROI is saved as an image in the corresponding gesture directory with a filename based on the number of images already saved for that gesture.
 
-   ```
-   /your-project-directory
-   ├── capture_images.py
-   ├── images/
-   └── dataset/
-   ```
+5. **Exit**: The video capture can be terminated by pressing the "Esc" key.
 
-## Instructions
+## Running the Script
 
-### 1. Capture Hand Gesture Images
+1. **Ensure your webcam is connected**.
+2. **Run the script**:
+    ```bash
+    python your_script_name.py
+    ```
+3. **Interact with the program**:
+    - Press keys `1` to `6` to save the current ROI as an image in the respective gesture directory.
+    - Press `Esc` to exit the video capture.
 
-1. **Run the Capture Script**
+## Example Output
 
-   Execute the `capture_images.py` script to start capturing images:
+When pressing key `1`, an image of the hand gesture associated with "Index" will be saved in the `HandGesture360x360/Index/` directory, named sequentially as `0.jpg`, `1.jpg`, etc., depending on the number of images already saved.
 
-   ```sh
-   python capture_images.py
-   ```
+## Troubleshooting
 
-2. **Capture Images**
+- **No image captured**: Ensure that your webcam is correctly connected and accessible.
+- **Script errors**: Verify that all required packages are installed and that there are no syntax errors in the script.
 
-   - The webcam feed will open with a blue frame displayed on the screen.
-   - Place your hand inside the blue frame.
-   - Press keys `1` through `6` on your keyboard to capture images. Each key press will save an image with the corresponding key number.
-   - Press the `ESC` key to exit the capture process.
+## License
 
-   - The processed black and white images will be saved in the `dataset/` folder.
-   - The original colored images will remain in the `images/` folder.
-
-## Notes
-
-- Ensure that the `images/` and `dataset/` folders exist in your project directory before running the scripts. If they do not exist, they will be created automatically.
-- The processing function applies adaptive thresholding and Gaussian blur to convert images to black and white with the hand in white and the background in black.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
+
+- by Aditya Kumar
