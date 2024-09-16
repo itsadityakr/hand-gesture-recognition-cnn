@@ -1,131 +1,83 @@
 import cv2
-import numpy as np
 import mediapipe as mp
-import matplotlib.pyplot as plt
 
-# Initialize the mediapipe hands class with higher confidence thresholds.
+# Initialize mediapipe hand model
 mp_hands = mp.solutions.hands
-
-hands_videos = mp_hands.Hands(static_image_mode=False, max_num_hands=1,
-                              min_detection_confidence=0.75,  # Increased detection confidence
-                              min_tracking_confidence=0.75)   # Increased tracking confidence
-
-# Initialize the mediapipe drawing class.
 mp_drawing = mp.solutions.drawing_utils
 
-def detectHandsLandmarks(image, hands, draw=True, display=True):
-    # Convert the image from BGR into RGB format.
-    imgRGB = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+# Function to classify the hand gesture
+def classify_hand_gesture(landmarks, handedness):
+    # Names for fingers based on MediaPipe indices
+    finger_names = ["Thumb", "Index", "Middle", "Ring", "Pinky"]
     
-    # Perform the Hands Landmarks Detection.
-    results = hands.process(imgRGB)
+    # Tips of each finger (MediaPipe Landmark IDs)
+    finger_tips = [4, 8, 12, 16, 20]
     
-    # If landmarks are found and drawing is enabled, draw them on the image.
-    if results.multi_hand_landmarks and draw:
-        for hand_landmarks in results.multi_hand_landmarks:
-            mp_drawing.draw_landmarks(image=image, landmark_list=hand_landmarks,
-                                      connections=mp_hands.HAND_CONNECTIONS,
-                                      landmark_drawing_spec=mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=2, circle_radius=2),
-                                      connection_drawing_spec=mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=2, circle_radius=2))
+    # Folded status for fingers (1 if folded, 0 if extended)
+    folded_status = []
     
-    if display:
-        plt.figure(figsize=[15, 15])
-        plt.subplot(121)
-        plt.imshow(image[:, :, ::-1])
-        plt.title("Original Image")
-        plt.axis('off')
-        plt.subplot(122)
-        plt.imshow(image[:, :, ::-1])
-        plt.title("Output")
-        plt.axis('off')
+    # Check each finger's status (extended or folded)
+    for i, tip in enumerate(finger_tips):
+        # Compare the finger tip position to the corresponding MCP (base knuckle)
+        if landmarks[tip].y < landmarks[tip - 2].y:  # If the tip is above the base knuckle, the finger is extended
+            folded_status.append(0)  # 0 means the finger is extended
+        else:
+            folded_status.append(1)  # 1 means the finger is folded
+    
+    # Identify the gesture
+    if all(folded_status):  # All fingers are folded
+        return "Fist"
+    elif all([status == 0 for status in folded_status]):  # All fingers are extended
+        return "Palm"
+    elif folded_status == [0, 1, 1, 1, 1]:  # Only thumb extended
+        if landmarks[4].x < landmarks[3].x:  # Check if thumb is pointing up
+            return "Thumb Up"
+        else:
+            return "Thumb Down"
+    elif folded_status == [0, 0, 1, 1, 1]:  # Thumb and index finger extended
+        return "Thumb + Index"
     else:
-        return image, results
+        active_fingers = [finger_names[i] for i, status in enumerate(folded_status) if status == 0]
+        return "Active Fingers: " + ", ".join(active_fingers)
 
-def countFingers(image, results):
-    fingers_tips_ids = {
-        'THUMB': mp_hands.HandLandmark.THUMB_TIP,
-        'INDEX': mp_hands.HandLandmark.INDEX_FINGER_TIP,
-        'MIDDLE': mp_hands.HandLandmark.MIDDLE_FINGER_TIP,
-        'RING': mp_hands.HandLandmark.RING_FINGER_TIP,
-        'PINKY': mp_hands.HandLandmark.PINKY_TIP
-    }
-    
-    hand_landmarks = results.multi_hand_landmarks[0]  # Get the first detected hand
-    hand_label = results.multi_handedness[0].classification[0].label  # Get whether it's 'Left' or 'Right' hand
+# Initialize webcam and hand detection
+cap = cv2.VideoCapture(0)
 
-    # Detect finger statuses
-    statuses = {finger: False for finger in fingers_tips_ids}
-    thumb_tip_x = hand_landmarks.landmark[fingers_tips_ids['THUMB']].x
-    thumb_ip_x = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_IP].x
-    thumb_status = thumb_tip_x < thumb_ip_x if hand_label == 'Right' else thumb_tip_x > thumb_ip_x
-    statuses['THUMB'] = thumb_status
-    
-    for finger, tip_id in fingers_tips_ids.items():
-        if finger == 'THUMB':
+with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands:
+    while cap.isOpened():
+        success, image = cap.read()
+        if not success:
+            print("Ignoring empty frame.")
             continue
-        pip_id = tip_id - 2
-        finger_status = hand_landmarks.landmark[tip_id].y < hand_landmarks.landmark[pip_id].y
-        statuses[finger] = finger_status
-    
-    return statuses
+        
+        # Convert the image to RGB for processing
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image.flags.writeable = False
+        results = hands.process(image)
+        
+        # Convert back to BGR for OpenCV operations
+        image.flags.writeable = True
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-def palmDetected(statuses):
-    if not any(statuses[finger] for finger in statuses if finger != 'THUMB'):
-        print("Palm (Stop): The wheelchair stops moving.")
+        if results.multi_hand_landmarks:
+            for hand_landmarks, handedness in zip(results.multi_hand_landmarks, results.multi_handedness):
+                # Draw hand landmarks on the image
+                mp_drawing.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
-def indexPinkyDetected(statuses):
-    if statuses['INDEX'] and statuses['PINKY'] and not statuses['MIDDLE'] and not statuses['RING']:
-        print("Index Finger + Pinky (Move Forward): The wheelchair moves forward.")
+                # Extract handedness (Left or Right)
+                label = handedness.classification[0].label
+                # Get the list of landmarks
+                landmarks = hand_landmarks.landmark
+                # Classify the gesture
+                gesture = classify_hand_gesture(landmarks, label)
+                # Display gesture on the image
+                cv2.putText(image, f'{label} Hand: {gesture}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        
+        # Display the resulting image
+        cv2.imshow('Hand Tracking', image)
 
-def middleRingDetected(statuses):
-    if statuses['MIDDLE'] and statuses['RING'] and not statuses['INDEX'] and not statuses['PINKY']:
-        print("Middle Finger + Ring Finger (Move Backward): The wheelchair moves backward.")
+        if cv2.waitKey(5) & 0xFF == 27:  # Press 'Esc' to exit
+            break
 
-def indexDetected(statuses):
-    if statuses['INDEX'] and not any(statuses[finger] for finger in statuses if finger != 'INDEX' and finger != 'THUMB'):
-        print("Index Finger (Turn Left): The wheelchair turns left.")
-
-def pinkyDetected(statuses):
-    if statuses['PINKY'] and not any(statuses[finger] for finger in statuses if finger != 'PINKY' and finger != 'THUMB'):
-        print("Pinky Finger (Turn Right): The wheelchair turns right.")
-
-def fistDetected(statuses):
-    if all(not statuses[finger] for finger in statuses if finger != 'THUMB'):
-        print("Fist Detected: Start")
-
-def detectGesture(statuses, hand_landmarks):
-    palmDetected(statuses)
-    indexPinkyDetected(statuses)
-    middleRingDetected(statuses)
-    indexDetected(statuses)
-    pinkyDetected(statuses)
-    fistDetected(statuses)
-
-# Initialize the VideoCapture object to read from the webcam.
-camera_video = cv2.VideoCapture(0)
-camera_video.set(3, 1280)
-camera_video.set(4, 960)
-
-# Create named window for resizing purposes.
-cv2.namedWindow('Fingers Counter', cv2.WINDOW_NORMAL)
-
-while camera_video.isOpened():
-    ok, frame = camera_video.read()
-    if not ok:
-        continue
-    
-    frame = cv2.flip(frame, 1)
-    frame, results = detectHandsLandmarks(frame, hands_videos, display=False)
-    
-    if results.multi_hand_landmarks:
-        statuses = countFingers(frame, results)
-        detectGesture(statuses, results.multi_hand_landmarks[0])
-                
-    cv2.imshow('Fingers Counter', frame)
-    
-    k = cv2.waitKey(1) & 0xFF
-    if k == 27:  # ESC key to exit
-        break
-
-camera_video.release()
+cap.release()
 cv2.destroyAllWindows()
