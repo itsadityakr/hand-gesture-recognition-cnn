@@ -1,83 +1,149 @@
 import cv2
 import mediapipe as mp
+import numpy as np
 
-# Initialize mediapipe hand model
+# Initialize Mediapipe Hands and Drawing utilities
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 
-# Function to classify the hand gesture
-def classify_hand_gesture(landmarks, handedness):
-    # Names for fingers based on MediaPipe indices
-    finger_names = ["Thumb", "Index", "Middle", "Ring", "Pinky"]
-    
-    # Tips of each finger (MediaPipe Landmark IDs)
-    finger_tips = [4, 8, 12, 16, 20]
-    
-    # Folded status for fingers (1 if folded, 0 if extended)
-    folded_status = []
-    
-    # Check each finger's status (extended or folded)
-    for i, tip in enumerate(finger_tips):
-        # Compare the finger tip position to the corresponding MCP (base knuckle)
-        if landmarks[tip].y < landmarks[tip - 2].y:  # If the tip is above the base knuckle, the finger is extended
-            folded_status.append(0)  # 0 means the finger is extended
-        else:
-            folded_status.append(1)  # 1 means the finger is folded
-    
-    # Identify the gesture
-    if all(folded_status):  # All fingers are folded
-        return "Fist"
-    elif all([status == 0 for status in folded_status]):  # All fingers are extended
-        return "Palm"
-    elif folded_status == [0, 1, 1, 1, 1]:  # Only thumb extended
-        if landmarks[4].x < landmarks[3].x:  # Check if thumb is pointing up
-            return "Thumb Up"
-        else:
-            return "Thumb Down"
-    elif folded_status == [0, 0, 1, 1, 1]:  # Thumb and index finger extended
-        return "Thumb + Index"
-    else:
-        active_fingers = [finger_names[i] for i, status in enumerate(folded_status) if status == 0]
-        return "Active Fingers: " + ", ".join(active_fingers)
+# Gesture recognition state
+start_triggered = False
 
-# Initialize webcam and hand detection
-cap = cv2.VideoCapture(0)
+# Function to start gesture control
+def start_gesture_control():
+    global start_triggered
+    start_triggered = True
+    print("Gesture control started")
 
-with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands:
-    while cap.isOpened():
-        success, image = cap.read()
-        if not success:
-            print("Ignoring empty frame.")
-            continue
+# Function for moving forward
+def move_forward():
+    if start_triggered:
+        print("Moving forward")
+
+# Function for moving backward
+def move_backward():
+    if start_triggered:
+        print("Moving backward")
+
+# Function for moving left
+def move_left():
+    if start_triggered:
+        print("Moving left")
+
+# Function for moving right
+def move_right():
+    if start_triggered:
+        print("Moving right")
+
+# Function to detect gestures based on hand landmarks
+def detect_gestures(hand_landmarks):
+    global start_triggered
+    
+    # Landmarks for fingers: [0] for wrist, [4] for thumb tip, [8] for index finger, [12] for middle finger
+    # [16] for ring finger, [20] for pinky finger
+
+    # Thumb landmarks
+    thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
+    thumb_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_MCP]
+    
+    # Index finger landmarks
+    index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+    index_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP]
+    
+    # Pinky finger landmarks
+    pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
+
+    # Palm detection (when index finger MCP is higher than tip) - Start Gesture
+    if index_mcp.y < index_tip.y and not start_triggered:
+        start_gesture_control()
+    
+    if start_triggered:
+        # Thumb Up - Move Forward
+        if thumb_tip.y < thumb_mcp.y:
+            move_forward()
         
-        # Convert the image to RGB for processing
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image.flags.writeable = False
-        results = hands.process(image)
+        # Thumb Down - Move Backward
+        elif thumb_tip.y > thumb_mcp.y:
+            move_backward()
         
-        # Convert back to BGR for OpenCV operations
-        image.flags.writeable = True
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-
-        if results.multi_hand_landmarks:
-            for hand_landmarks, handedness in zip(results.multi_hand_landmarks, results.multi_handedness):
-                # Draw hand landmarks on the image
-                mp_drawing.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-
-                # Extract handedness (Left or Right)
-                label = handedness.classification[0].label
-                # Get the list of landmarks
-                landmarks = hand_landmarks.landmark
-                # Classify the gesture
-                gesture = classify_hand_gesture(landmarks, label)
-                # Display gesture on the image
-                cv2.putText(image, f'{label} Hand: {gesture}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        # Index Finger - Move Left
+        elif index_tip.y < index_mcp.y:
+            move_left()
         
-        # Display the resulting image
-        cv2.imshow('Hand Tracking', image)
+        # Pinky Finger - Move Right
+        elif pinky_tip.y < pinky_tip.y:
+            move_right()
 
-        if cv2.waitKey(5) & 0xFF == 27:  # Press 'Esc' to exit
-            break
+# Function to create a black fingers and white background mask
+def create_black_white_mask(image, results):
+    # Create an empty white background
+    mask = np.ones(image.shape[:2], dtype="uint8") * 255
+    
+    if results.multi_hand_landmarks:
+        for hand_landmarks in results.multi_hand_landmarks:
+            # Convert hand landmarks into coordinates
+            for landmark in hand_landmarks.landmark:
+                h, w, _ = image.shape
+                cx, cy = int(landmark.x * w), int(landmark.y * h)
+                # Draw the black points for fingers
+                cv2.circle(mask, (cx, cy), 10, (0, 0, 0), -1)
+    
+    # Return the binary mask where hand is black and background is white
+    return mask
 
-cap.release()
-cv2.destroyAllWindows()
+# Main function to process webcam input and detect gestures
+def main():
+    global start_triggered
+    
+    # Initialize webcam
+    cap = cv2.VideoCapture(0)
+    
+    with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.7, min_tracking_confidence=0.7) as hands:
+        while cap.isOpened():
+            success, image = cap.read()
+            if not success:
+                print("Ignoring empty camera frame.")
+                continue
+
+            # Flip the image horizontally for a later selfie-view display
+            image = cv2.flip(image, 1)
+
+            # Convert the BGR image to RGB
+            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            
+            # Process the image and detect hands
+            results = hands.process(image_rgb)
+            
+            # Create a black and white mask for fingers
+            mask = create_black_white_mask(image, results)
+            mask_rgb = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+            
+            # If hands are detected, draw landmarks and detect gestures
+            if results.multi_hand_landmarks:
+                for hand_landmarks in results.multi_hand_landmarks:
+                    # Detect gestures based on hand landmarks
+                    detect_gestures(hand_landmarks)
+                    
+                    # Draw hand landmarks in color
+                    mp_drawing.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+                # Display detection confidence on the image
+                detection_confidence = results.multi_handedness[0].classification[0].score * 100  # In percentage
+                cv2.putText(image, f"Accuracy: {detection_confidence:.2f}%", (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+
+            # Combine the original image and the black-white mask (optional display)
+            combined = cv2.hconcat([image, mask_rgb])
+
+            # Display the combined image with black/white mask and colored landmarks
+            cv2.imshow('Hand Gesture Control (Black and White Mask + Color)', combined)
+
+            # Exit if 'q' is pressed
+            if cv2.waitKey(5) & 0xFF == ord('q'):
+                break
+    
+    cap.release()
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
