@@ -1,0 +1,8 @@
+sequence = [
+    "dataset.py",
+    "preprocessing.py",
+    "train_model.py",
+    "sign_detector.py",
+    "model_evaluation.py",
+    "accuracy_evaluation.py"
+]

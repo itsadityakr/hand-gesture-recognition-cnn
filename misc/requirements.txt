@@ -1,0 +1,12 @@
+opencv-python
+mediapipe
+numpy
+keras
+scikit-learn
+matplotlib
+seaborn
+Pillow
+tensorflow
+
+# python.exe -m pip install --upgrade pip
+# pip install pandas nltk matplotlib seaborn scikit-learn numpy tqdm opencv-python mediapipe keras Pillow tensorflow 
