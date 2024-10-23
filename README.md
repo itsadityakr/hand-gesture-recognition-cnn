@@ -1,137 +1,166 @@
-# Smart Wheelchair System with Gesture Recognition
+# Hand Gesture using CNN
 
-## Overview
-This project presents an innovative smart wheelchair system that leverages Convolutional Neural Networks (CNN) for hand gesture recognition, allowing intuitive control through predefined gestures. Designed to enhance mobility for users, the system employs real-time gesture detection using a camera and Raspberry Pi, replacing traditional button-based controls.
+## Project Structure
 
-### Key Functional Components
-
-1. **Hardware Setup**
-   - **GPIO Control:** Controls wheelchair movement via four motor pins:
-     - IN1: Forward
-     - IN2: Backward
-     - IN3: Left
-     - IN4: Right
-   - **LEDs and Buzzer Indicators:**
-     - **White LED:** Forward movement
-     - **Red LED:** Backward movement or stop
-     - **Yellow LEDs:** Left and right turns
-     - **Green LED and Buzzer:** Correct gesture recognized
-     - **Blue LED and Buzzer:** Incorrect gesture recognized
-   - **Distance Sensor (HC-SR04):** Prevents collisions by detecting obstacles within 15 cm.
-
-2. **LED Matrix Display**
-   - **8x8 MAX7219 LED Matrix:** Provides visual feedback with the following indicators:
-     - F: Forward
-     - R: Reverse
-     - <: Left turn
-     - >: Right turn
-     - B: Stop or wrong gesture
-     - X: Obstacle detected
-
-3. **Hand Gesture Recognition Using CNN**
-   - **Gesture Set:**
-     - Fist: Stops the wheelchair
-     - Index + Pinky: Moves backward
-     - Palm: Moves forward
-     - Index + Thumb: Turns left
-     - Pinky + Thumb: Turns right
-   - **Data Collection:** 12000 images per gesture captured under varied conditions.
-   - **CNN Model Architecture:** Convolutional, pooling, and fully connected layers for gesture classification.
-   - **Model Training:** Supervised learning using labeled datasets.
-
-4. **Hardware Integration for Movement Control**
-   - **Raspberry Pi:** Captures images, runs CNN for gesture recognition, and sends commands to motors.
-   - **L298 Motor Driver:** Converts Raspberry Pi signals into motor commands.
-   - **Gear Motors:** Drive the wheelchair wheels for movement.
-
-5. **Movement Control Logic**
-   - **Forward:** Moves for 1 second unless an obstacle is detected.
-   - **Backward:** Moves for 1 second.
-   - **Left/Right Turns:** Turns for 1 second.
-   - **Stop:** Activates red LED and halts movement.
-
-6. **Gesture-to-Movement Mapping**
-   | Gesture             | Action                |
-   |---------------------|-----------------------|
-   | Fist                | Stops the wheelchair   |
-   | Index + Pinky      | Moves backward         |
-   | Palm                | Moves forward          |
-   | Index + Thumb      | Turns left             |
-   | Pinky + Thumb      | Turns right            |
-
-7. **Testing and Validation**
-   - **Gesture Recognition Accuracy:** Evaluated under various conditions.
-   - **Response Time:** Measures the delay between gesture detection and movement.
-   - **System Reliability:** Long-term performance evaluation.
-
-### Conclusion
-The CNN-based smart wheelchair system demonstrates the potential of AI to improve mobility for users with disabilities. By enabling gesture-based control, the system enhances user independence and can be further developed by expanding gesture recognition, optimizing processing speeds, and adding safety features.
-
-## Directory Structure
 ```plaintext
-smart_wheelchair_project/
-│
+smart_wheelchair/
 ├── dataset/
-│   ├── B/
-│   │   └── (12000 images for backward gesture)
-│   ├── F/
-│   │   └── (12000 images for forward gesture)
-│   ├── L/
-│   │   └── (12000 images for left gesture)
-│   ├── R/
-│   │   └── (12000 images for right gesture)
-│   └── S/
-│       └── (12000 images for stop gesture)
-│
-├── dataset.py            # Captures hand gesture images
-├── preprocessing.py      # Preprocesses images for training
-├── train_model.py        # Defines and trains the CNN model
-└── main.py              # Runs the final application
+│   ├── B/                # Images for backward gesture
+│   ├── F/                # Images for forward gesture
+│   ├── L/                # Images for left turn gesture
+│   ├── R/                # Images for right turn gesture
+│   ├── S/                # Images for stop gesture
+├── dataset.py            # Captures dataset using webcam and MediaPipe
+├── preprocessing.py      # Preprocesses and splits the dataset
+├── train_model.py        # Trains the CNN model
+├── sign_detector.py      # Real-time gesture recognition and wheelchair control
+├── cnn_model.h5          # Trained CNN model
+├── hand_dataset.npz      # Preprocessed dataset
+└── README.md             # Project documentation
 ```
 
-## File Descriptions
+## Key Features
 
-### 1. `dataset.py`
-- **Purpose:** Captures a dataset of hand images for gestures ('B', 'F', 'L', 'R', 'S').
-- **Key Steps:**
-  - Initializes MediaPipe for hand detection.
-  - Captures 12000 images per gesture.
-  - Saves images in respective folders.
+- **Gesture-Based Navigation**: 
+  - **Move Forward**: ✋ Palm 
+  - **Move Backward**: 🤘 Index + Pinky 
+  - **Turn Left**: 👆 Index + Thumb 
+  - **Turn Right**: 🤙 Pinky + Thumb 
+  - **Stop**: ✊ Fist
+- **Real-Time Gesture Recognition**: 
+  - A CNN model processes live webcam images to detect hand gestures and translates them into movement commands in real time.
 
-### 2. `preprocessing.py`
-- **Purpose:** Preprocesses and splits the dataset for training.
-- **Key Steps:**
-  - Loads images, applies transformations (flipping, blurring, thresholding).
-  - Splits data into training, validation, and test sets.
-  - Saves preprocessed dataset as `hand_dataset.npz`.
 
-### 3. `train_model.py`
-- **Purpose:** Defines and trains a CNN to classify hand gestures.
-- **Key Steps:**
-  - Loads the preprocessed dataset.
-  - Applies data augmentation.
-  - Builds and compiles a CNN model.
-  - Trains the model and saves it as `cnn_model.h5`.
+## 1. `dataset.py` - Dataset Collection
 
-### 4. `main.py`
-- **Purpose:** Final run file to operate the smart wheelchair system.
-- **Key Steps:**
-  - Captures real-time images.
-  - Uses the trained CNN model for gesture recognition.
-  - Sends motor control commands based on detected gestures.
+This script is responsible for creating a dataset of hand gesture images using a webcam and **MediaPipe** for real-time hand tracking. 
 
-## Output
-- **Preprocessed Dataset:** Saved in `valid/` folder and as `hand_dataset.npz`.
-- **Trained Model:** Saved as `cnn_model.h5`.
+### Key Steps:
 
-## Installation
-To get started with the project:
-1. Clone the repository.
-2. Install required packages using `pip install -r requirements.txt`.
-3. Connect the hardware components as described in the setup section.
+- **Initialization**:
+  - **MediaPipe** is initialized to detect hand landmarks in real time.
 
-## License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+- **Capture Images**:
+  - Opens a live webcam feed.
+  - Detects hands and captures the region of interest (ROI).
+
+- **Image Storage**:
+  - Captures images based on the gesture the user wants to record.
+  - Saves them in folders corresponding to specific gestures (e.g., `B`, `F`, `L`, `R`, `S`).
+
+### Example of Usage:
+```bash
+python dataset.py
+```
+This command starts capturing images of hand gestures, which are stored in a structured dataset.
 
 ---
 
+## 2. `preprocessing.py` - Data Preprocessing and Splitting
+
+This script prepares the dataset for training by applying transformations and splitting it into training, validation, and test sets.
+
+### Key Steps:
+
+- **Image Preprocessing**:
+  - Uses **OpenCV** to load images:
+    - Resize images to **32x32 pixels**.
+    - Convert images to **grayscale**.
+    - Apply **thresholding** and **normalization**.
+
+- **Data Augmentation**:
+  - Enhances the dataset by applying transformations like flipping, rotation, and zooming.
+
+- **Dataset Splitting**:
+  - Splits the dataset into:
+    - **70% Training Set**
+    - **20% Validation Set**
+    - **10% Test Set**
+
+- **Saving Processed Data**:
+  - Saves the processed data as a compressed **.npz** file (`hand_dataset.npz`).
+
+### Example of Usage:
+```bash
+python preprocessing.py
+```
+This command processes the images and prepares them for model training.
+
+---
+
+## 3. `train_model.py` - CNN Model Definition and Training
+
+This script defines and trains a **Convolutional Neural Network (CNN)** to classify hand gestures.
+
+### Key Steps:
+
+- **Loading Data**:
+  - Loads the preprocessed dataset (`hand_dataset.npz`).
+
+- **Data Augmentation**:
+  - Applies real-time augmentation using **ImageDataGenerator**.
+
+- **Model Architecture**:
+  - Constructs a CNN with the following layers:
+    - **Conv2D**: Extracts features from images.
+    - **MaxPooling2D**: Reduces dimensionality.
+    - **Flatten**: Converts features to a 1D vector.
+    - **Dense**: Fully connected layers for classification.
+    - **Dropout**: Helps prevent overfitting.
+    - **Softmax**: Outputs probabilities for each class.
+
+- **Model Compilation**:
+  - Compiles the model using the **Adam optimizer** and **categorical crossentropy loss**.
+
+- **Training**:
+  - Trains the model for **35 epochs** and validates its performance.
+
+- **Saving Model**:
+  - Saves the trained model as `cnn_model.h5`.
+
+### Example of Usage:
+```bash
+python train_model.py
+```
+This command trains the CNN and saves the model for later use.
+
+---
+
+## 4. `sign_detector.py` - Real-Time Gesture Recognition and Wheelchair Control
+
+This is the main script that integrates gesture recognition and motor control, continuously processing webcam images.
+
+### Key Steps:
+
+- **Loading the Trained Model**:
+  - Loads the saved model (`cnn_model.h5`) for gesture prediction.
+
+- **Real-Time Webcam Feed**:
+  - Captures images from the webcam continuously.
+
+- **Gesture Prediction**:
+  - Preprocesses each captured frame and feeds it into the CNN.
+  - Predicts the gesture and determines the corresponding action (e.g., forward, backward).
+
+- **Motor Control Logic**:
+  - Sends commands to the motor driver (L298) to control wheelchair movements:
+    - **Forward**, **Backward**, **Left**, **Right**, **Stop**.
+
+- **Feedback Mechanisms**:
+  - Uses LEDs and buzzers for feedback:
+    - **Green LED**: Successful gesture recognition.
+    - **Blue LED**: Incorrect gesture detected.
+    - **Red LED**: Stop movement.
+
+- **Obstacle Detection**:
+  - Utilizes the **HC-SR04 distance sensor** to detect obstacles.
+  - Stops the wheelchair if an object is detected within 15 cm.
+
+### Example of Usage:
+```bash
+python sign_detector.py
+```
+This command starts the system, capturing real-time gestures and controlling the wheelchair based on user input.
+
+---
+ - by Aditya Kumar
