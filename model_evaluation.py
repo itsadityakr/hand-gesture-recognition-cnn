@@ -82,7 +82,7 @@ plt.plot(history.history['val_loss'], label='Validation Loss')
 plt.title('Model Loss')
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
-plt.legend()
+plt.legend()s
 plt.grid(True)
 plt.savefig(os.path.join(output_dir, 'loss_plot.png'))
 plt.close()

@@ -1,0 +1,6 @@
+Training Parameters:
+Number of Classes: 5
+Number of Epochs: 35
+Batch Size: 32
+Test Loss: 0.3666
+Test Accuracy: 0.8305
